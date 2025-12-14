@@ -1,0 +1,5 @@
+{
+  "name": "ICS Magic Converter",
+  "description": "A tool to format and convert raw text into Apple Calendar compatible ICS files. Paste your ICS content, and get a perfectly formatted calendar file ready for download.",
+  "requestFramePermissions": []
+}
