@@ -1,5 +1,5 @@
-import React from 'react';
-import { Download, Copy, Check, CalendarPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Copy, Check, CalendarPlus, FileEdit } from 'lucide-react';
 import { IcsGenerationResult } from '../types';
 import Button from './Button';
 
@@ -9,17 +9,48 @@ interface ResultCardProps {
 }
 
 const ResultCard: React.FC<ResultCardProps> = ({ result, onReset }) => {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+  const [fileName, setFileName] = useState('');
+
+  // Initialize filename when result loads
+  useEffect(() => {
+    if (result.filename) {
+      setFileName(result.filename.replace(/\.ics$/i, ''));
+    }
+  }, [result.filename]);
+
+  const getFullFileName = () => {
+    const cleanName = fileName.trim() || 'calendar_event';
+    return cleanName.toLowerCase().endsWith('.ics') ? cleanName : `${cleanName}.ics`;
+  };
 
   const handleDownload = () => {
+    const name = getFullFileName();
     const blob = new Blob([result.icsContent], { type: 'text/calendar;charset=utf-8' });
+    
+    // Create URL
     const url = URL.createObjectURL(blob);
+    
+    // Create anchor
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', result.filename);
+    link.setAttribute('download', name);
+    
+    // Force download behavior
+    link.style.display = 'none';
     document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    
+    // Use a small timeout to ensure DOM is ready and event loops clear
+    // This often helps with Safari/iOS specific glitches
+    setTimeout(() => {
+        link.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }, 0);
   };
 
   const handleCopy = () => {
@@ -33,9 +64,21 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onReset }) => {
   return (
     <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-[#E6E1D6] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="p-6 border-b border-[#F2F0EB] bg-[#FAF9F6]">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           <h2 className="text-lg font-serif font-medium text-[#383528]">Event Ready</h2>
-          <span className="text-xs font-mono text-[#8F8A7D] bg-[#EBE8E1] px-2 py-1 rounded">{result.filename}</span>
+          
+          {/* Filename Editor */}
+          <div className="flex items-center gap-2 bg-white border border-[#E6E1D6] rounded-lg px-3 py-1.5 focus-within:border-[#D97757] focus-within:ring-1 focus-within:ring-[#D97757]/30 transition-all shadow-sm">
+            <FileEdit size={14} className="text-[#8F8A7D]" />
+            <input 
+                type="text" 
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                className="text-xs font-mono text-[#383528] bg-transparent focus:outline-none w-32 sm:w-48 placeholder-[#C4C0B5]"
+                placeholder="filename"
+            />
+            <span className="text-xs font-mono text-[#8F8A7D] select-none">.ics</span>
+          </div>
         </div>
         <p className="text-[#666053] text-sm">
             {result.summary || "Your event has been processed."}
@@ -45,10 +88,11 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onReset }) => {
       <div className="p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button onClick={handleDownload} className="w-full" icon={<Download size={18} />}>
-                Download .ics
+                Download File
             </Button>
             <a 
                 href={dataUri} 
+                download={getFullFileName()}
                 className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 text-sm tracking-wide bg-[#383528] hover:bg-[#2C2920] text-[#F7F5F2] shadow-sm"
             >
                 <CalendarPlus size={18} className="mr-2"/>
